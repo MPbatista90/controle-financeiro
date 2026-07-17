@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e94560">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <title>Controle Financeiro Mensal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 950px; margin: 0 auto; }
+
+        /* Cabeçalho com Logo */
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .logo { flex-shrink: 0; }
+
+        .logo svg {
+            filter: drop-shadow(0 0 8px rgba(233, 69, 96, 0.4));
+            transition: transform 0.3s;
+        }
+
+        .logo:hover svg { transform: scale(1.1) rotate(-5deg); }
+
+        h1 { font-size: 1.8rem; color: #e94560; white-space: nowrap; }
+
+        /* Navegador de Meses */
+        .navegador-mes {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .btn-nav {
+            padding: 10px 18px;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            background: #16213e;
+            color: #fff;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-nav:hover { background: #e94560; border-color: #e94560; }
+
+        .mes-atual {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #448aff;
+            min-width: 220px;
+            text-align: center;
+        }
+
+        /* Cards de Resumo */
+        .resumo {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+            border: 1px solid #0f3460;
+        }
+
+        .card h3 {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card .valor { font-size: 1.6rem; font-weight: bold; }
+
+        .card.entrada .valor { color: #00c853; }
+        .card.saida .valor { color: #ff1744; }
+        .card.saldo .valor { color: #448aff; }
+
+        /* Resumo Anual */
+        .resumo-anual {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 18px 25px;
+            margin-bottom: 25px;
+            border: 1px solid #0f3460;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .resumo-anual span { font-size: 0.9rem; }
+        .resumo-anual .label { color: #aaa; }
+        .resumo-anual .val { font-weight: bold; }
+        .resumo-anual .val.verde { color: #00c853; }
+        .resumo-anual .val.vermelho { color: #ff1744; }
+        .resumo-anual .val.azul { color: #448aff; }
+
+        /* Formulário */
+        .form-area {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 22px;
+            margin-bottom: 25px;
+            border: 1px solid #0f3460;
+        }
+
+        .form-area h2 { margin-bottom: 18px; font-size: 1.1rem; color: #e94560; }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .form-group { display: flex; flex-direction: column; }
+
+        .form-group label {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px 12px;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus { border-color: #e94560; }
+
+        .form-group select option { background: #1a1a2e; }
+
+        .btn-add {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 8px;
+            background: #e94560;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        .btn-add:hover { background: #c73650; }
+        .btn-add:active { transform: scale(0.97); }
+
+        /* Tabela */
+        .tabela-area {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 22px;
+            border: 1px solid #0f3460;
+        }
+
+        .tabela-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .tabela-header h2 { font-size: 1.1rem; color: #e94560; }
+
+        .btn-limpar {
+            padding: 8px 16px;
+            border: 1px solid #ff1744;
+            border-radius: 8px;
+            background: transparent;
+            color: #ff1744;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-limpar:hover { background: #ff1744; color: #fff; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        thead th {
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 2px solid #0f3460;
+            color: #aaa;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background: rgba(233, 69, 96, 0.08); }
+
+        tbody td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #0f3460;
+            font-size: 0.9rem;
+        }
+
+        .tipo-badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .tipo-badge.entrada { background: rgba(0,200,83,0.15); color: #00c853; }
+        .tipo-badge.saida { background: rgba(255,23,68,0.15); color: #ff1744; }
+
+        .valor-cell.entrada { color: #00c853; font-weight: bold; }
+        .valor-cell.saida { color: #ff1744; font-weight: bold; }
+
+        .btn-excluir {
+            background: transparent;
+            border: 1px solid #ff1744;
+            color: #ff1744;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+        }
+
+        .btn-excluir:hover { background: #ff1744; color: #fff; }
+
+        .vazio { text-align: center; padding: 35px; color: #555; font-style: italic; }
+
+        /* Botão voltar hoje */
+        .btn-hoje {
+            padding: 8px 16px;
+            border: 1px solid #448aff;
+            border-radius: 8px;
+            background: transparent;
+            color: #448aff;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: 10px;
+        }
+
+        .btn-hoje:hover { background: #448aff; color: #fff; }
+
+        /* Botões Exportar/Importar */
+        .backup-area {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .btn-export, .btn-import {
+            padding: 9px 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-export {
+            background: transparent;
+            border: 1px solid #00c853;
+            color: #00c853;
+        }
+
+        .btn-export:hover { background: #00c853; color: #fff; }
+
+        .btn-import {
+            background: transparent;
+            border: 1px solid #ffab00;
+            color: #ffab00;
+        }
+
+        .btn-import:hover { background: #ffab00; color: #1a1a2e; }
+
+        #inputImport { display: none; }
+
+        @media (max-width: 768px) {
+            .resumo { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .btn-add { width: 100%; }
+            .resumo-anual { flex-direction: column; align-items: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Logo + Título -->
+        <div class="cabecalho">
+            <div class="logo">
+                <svg width="70" height="70" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Círculo externo -->
+                    <circle cx="50" cy="50" r="46" fill="#16213e" stroke="#e94560" stroke-width="3"/>
+                    <!-- Gráfico de barras -->
+                    <rect x="18" y="55" width="12" height="25" rx="3" fill="#00c853"/>
+                    <rect x="34" y="40" width="12" height="40" rx="3" fill="#448aff"/>
+                    <rect x="50" y="30" width="12" height="50" rx="3" fill="#ffab00"/>
+                    <rect x="66" y="45" width="12" height="35" rx="3" fill="#e94560"/>
+                    <!-- Seta de crescimento -->
+                    <polyline points="24,52 40,37 56,27 72,42" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polygon points="72,42 68,35 75,38" fill="#fff"/>
+                </svg>
+            </div>
+            <h1>Controle Financeiro</h1>
+        </div>
+
+        <!-- Backup -->
+        <div class="backup-area">
+            <button class="btn-export" onclick="exportarDados()">Exportar Dados</button>
+            <button class="btn-import" onclick="document.getElementById('inputImport').click()">Importar Dados</button>
+            <input type="file" id="inputImport" accept=".json,.xlsx,.xls" onchange="importarDados(event)">
+        </div>
+
+        <!-- Navegador de Meses -->
+        <div class="navegador-mes">
+            <button class="btn-nav" onclick="mudarMes(-1)">&#9664;</button>
+            <div class="mes-atual" id="mesAtual"></div>
+            <button class="btn-nav" onclick="mudarMes(1)">&#9654;</button>
+            <button class="btn-hoje" onclick="voltarHoje()">Hoje</button>
+        </div>
+
+        <!-- Resumo do Mês -->
+        <div class="resumo">
+            <div class="card entrada">
+                <h3>Entradas</h3>
+                <div class="valor" id="totalEntradas">R$ 0,00</div>
+            </div>
+            <div class="card saida">
+                <h3>Saídas</h3>
+                <div class="valor" id="totalSaidas">R$ 0,00</div>
+            </div>
+            <div class="card saldo">
+                <h3>Saldo</h3>
+                <div class="valor" id="saldo">R$ 0,00</div>
+            </div>
+        </div>
+
+        <!-- Resumo Anual -->
+        <div class="resumo-anual" id="resumoAnual"></div>
+
+        <!-- Formulário -->
+        <div class="form-area">
+            <h2>Novo Lançamento</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <input type="text" id="descricao" placeholder="Ex: Salário, Mercado...">
+                </div>
+                <div class="form-group">
+                    <label>Valor (R$)</label>
+                    <input type="number" id="valor" placeholder="0,00" step="0.01" min="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="tipo">
+                        <option value="entrada">Entrada</option>
+                        <option value="saida">Saída</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Data</label>
+                    <input type="date" id="data">
+                </div>
+                <button class="btn-add" onclick="adicionarLancamento()">+ Adicionar</button>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="tabela-area">
+            <div class="tabela-header">
+                <h2 id="tituloTabela">Histórico</h2>
+                <button class="btn-limpar" onclick="limparMes()">Limpar Mês</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo"></tbody>
+            </table>
+            <div class="vazio" id="msgVazio">Nenhum lançamento neste mês.</div>
+        </div>
+    </div>
+
+    <script>
+        const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                       'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+        let lancamentos = JSON.parse(localStorage.getItem('lancamentos')) || [];
+        let mesAtual = new Date().getMonth();
+        let anoAtual = new Date().getFullYear();
+
+        function init() {
+            document.getElementById('data').valueAsDate = new Date();
+            renderizar();
+        }
+
+        function getChaveMes(ano, mes) { return `${ano}-${String(mes + 1).padStart(2, '0')}`; }
+
+        function filtrarMes() {
+            const chave = getChaveMes(anoAtual, mesAtual);
+            return lancamentos.filter(l => l.data.substring(0, 7) === chave);
+        }
+
+        function formatarData(dataStr) {
+            const d = new Date(dataStr + 'T00:00:00');
+            return d.toLocaleDateString('pt-BR');
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function mudarMes(delta) {
+            mesAtual += delta;
+            if (mesAtual > 11) { mesAtual = 0; anoAtual++; }
+            if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
+            document.getElementById('data').value = `${anoAtual}-${String(mesAtual + 1).padStart(2, '0')}-01`;
+            renderizar();
+        }
+
+        function voltarHoje() {
+            mesAtual = new Date().getMonth();
+            anoAtual = new Date().getFullYear();
+            document.getElementById('data').valueAsDate = new Date();
+            renderizar();
+        }
+
+        function adicionarLancamento() {
+            const descricao = document.getElementById('descricao').value.trim();
+            const valor = parseFloat(document.getElementById('valor').value);
+            const tipo = document.getElementById('tipo').value;
+            const data = document.getElementById('data').value;
+
+            if (!descricao) { alert('Digite uma descrição.'); return; }
+            if (!valor || valor <= 0) { alert('Digite um valor válido.'); return; }
+            if (!data) { alert('Selecione uma data.'); return; }
+
+            lancamentos.push({ id: Date.now(), descricao, valor, tipo, data });
+            salvar();
+            renderizar();
+            document.getElementById('descricao').value = '';
+            document.getElementById('valor').value = '';
+        }
+
+        function excluirLancamento(id) {
+            if (!confirm('Excluir este lançamento?')) return;
+            lancamentos = lancamentos.filter(l => l.id !== id);
+            salvar();
+            renderizar();
+        }
+
+        function limparMes() {
+            const chave = getChaveMes(anoAtual, mesAtual);
+            const nomeMes = MESES[mesAtual] + ' ' + anoAtual;
+            if (!confirm(`Limpar TODOS os lançamentos de ${nomeMes}?`)) return;
+            lancamentos = lancamentos.filter(l => l.data.substring(0, 7) !== chave);
+            salvar();
+            renderizar();
+        }
+
+        function salvar() { localStorage.setItem('lancamentos', JSON.stringify(lancamentos)); }
+
+        function renderizar() {
+            const nomeMes = MESES[mesAtual] + ' ' + anoAtual;
+            document.getElementById('mesAtual').textContent = nomeMes;
+            document.getElementById('tituloTabela').textContent = 'Histórico - ' + nomeMes;
+
+            const doMes = filtrarMes();
+            const tbody = document.getElementById('tabelaCorpo');
+            const msgVazio = document.getElementById('msgVazio');
+
+            let totalEntradas = 0, totalSaidas = 0;
+            doMes.forEach(l => {
+                if (l.tipo === 'entrada') totalEntradas += l.valor;
+                else totalSaidas += l.valor;
+            });
+
+            document.getElementById('totalEntradas').textContent = formatarMoeda(totalEntradas);
+            document.getElementById('totalSaidas').textContent = formatarMoeda(totalSaidas);
+            document.getElementById('saldo').textContent = formatarMoeda(totalEntradas - totalSaidas);
+
+            const ordenados = [...doMes].sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            if (ordenados.length === 0) {
+                tbody.innerHTML = '';
+                msgVazio.style.display = 'block';
+            } else {
+                msgVazio.style.display = 'none';
+                tbody.innerHTML = ordenados.map(l => `
+                    <tr>
+                        <td>${formatarData(l.data)}</td>
+                        <td>${l.descricao}</td>
+                        <td><span class="tipo-badge ${l.tipo}">${l.tipo}</span></td>
+                        <td class="valor-cell ${l.tipo}">${l.tipo === 'saida' ? '-' : ''}${formatarMoeda(l.valor)}</td>
+                        <td><button class="btn-excluir" onclick="excluirLancamento(${l.id})">Excluir</button></td>
+                    </tr>
+                `).join('');
+            }
+
+            renderizarResumoAnual();
+        }
+
+        function renderizarResumoAnual() {
+            const doAno = lancamentos.filter(l => l.data.substring(0, 4) === String(anoAtual));
+            let ent = 0, sai = 0;
+            doAno.forEach(l => {
+                if (l.tipo === 'entrada') ent += l.valor; else sai += l.valor;
+            });
+
+            document.getElementById('resumoAnual').innerHTML = `
+                <span><span class="label">Ano: </span><span class="val azul">${anoAtual}</span></span>
+                <span><span class="label">Entradas: </span><span class="val verde">${formatarMoeda(ent)}</span></span>
+                <span><span class="label">Saídas: </span><span class="val vermelho">${formatarMoeda(sai)}</span></span>
+                <span><span class="label">Saldo Anual: </span><span class="val azul">${formatarMoeda(ent - sai)}</span></span>
+                <span><span class="label">Total Lançamentos: </span><span class="val">${doAno.length}</span></span>
+            `;
+        }
+
+        function exportarDados() {
+            const dados = JSON.stringify(lancamentos, null, 2);
+            const blob = new Blob([dados], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-financeiro-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('Dados exportados com sucesso! Guarde o arquivo em local seguro.');
+        }
+
+        function importarDados(event) {
+            const arquivo = event.target.files[0];
+            if (!arquivo) return;
+
+            const nome = arquivo.name.toLowerCase();
+            const leitor = new FileReader();
+
+            if (nome.endsWith('.xlsx') || nome.endsWith('.xls')) {
+                leitor.onload = function(e) {
+                    try {
+                        const dados = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(dados, { type: 'array' });
+                        let todosLancamentos = [];
+                        const mesesMap = {
+                            'JANEIRO': 1, 'FEVEREIRO': 2, 'MARÇO': 3, 'ABRIL': 4,
+                            'MAIO': 5, 'JUNHO': 6, 'JULHO': 7, 'AGOSTO': 8,
+                            'SETEMBRO': 9, 'OUTUBRO': 10, 'NOVEMBRO': 11, 'DEZEMBRO': 12
+                        };
+
+                        workbook.SheetNames.forEach(function(sheetName) {
+                            const ws = workbook.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+                            json.forEach(function(row, idx) {
+                                if (idx === 0) return;
+                                if (!row[0] || !row[1] || !row[3]) return;
+
+                                let tipo = String(row[1]).trim().toUpperCase();
+                                if (tipo === 'ENTRADA' || tipo === 'ENT') tipo = 'entrada';
+                                else if (tipo === 'SAÍDA' || tipo === 'SAIDA' || tipo === 'SAI') tipo = 'saida';
+                                else return;
+
+                                let valor = parseFloat(row[3]);
+                                if (isNaN(valor) || valor <= 0) return;
+
+                                let dataStr = '';
+                                if (row[0] instanceof Date) {
+                                    const d = row[0];
+                                    dataStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                                } else if (typeof row[0] === 'string' && row[0].match(/^\d{4}-\d{2}-\d{2}/)) {
+                                    dataStr = row[0].substring(0, 10);
+                                } else if (typeof row[0] === 'number') {
+                                    const epoch = new Date((row[0] - 25569) * 86400 * 1000);
+                                    dataStr = epoch.getFullYear() + '-' + String(epoch.getMonth() + 1).padStart(2, '0') + '-' + String(epoch.getDate()).padStart(2, '0');
+                                } else return;
+
+                                const descricao = row[2] ? String(row[2]).trim() : 'Sem descrição';
+
+                                todosLancamentos.push({
+                                    id: Date.now() + Math.floor(Math.random() * 1000000),
+                                    descricao: descricao,
+                                    valor: valor,
+                                    tipo: tipo,
+                                    data: dataStr
+                                });
+                            });
+                        });
+
+                        if (todosLancamentos.length === 0) {
+                            alert('Nenhum lançamento válido encontrado na planilha.');
+                            return;
+                        }
+
+                        const resposta = confirm(
+                            'Planilha Excel detectada!\n\n' +
+                            'Encontrados ' + todosLancamentos.length + ' lançamentos.\n\n' +
+                            'Deseja ADICIONAR aos dados existentes?\n\n' +
+                            'OK = Adicionar\nCancelar = Substituir tudo'
+                        );
+
+                        if (resposta) {
+                            const ids = new Set(lancamentos.map(function(l) { return l.id; }));
+                            const novos = todosLancamentos.filter(function(l) { return !ids.has(l.id); });
+                            lancamentos = lancamentos.concat(novos);
+                            alert(novos.length + ' novos lançamentos adicionados.');
+                        } else {
+                            lancamentos = todosLancamentos;
+                            alert('Dados substituídos com sucesso!');
+                        }
+
+                        salvar();
+                        renderizar();
+                    } catch (err) {
+                        alert('Erro ao ler planilha Excel: ' + err.message);
+                    }
+                };
+                leitor.readAsArrayBuffer(arquivo);
+            } else {
+                leitor.onload = function(e) {
+                    try {
+                        const dados = JSON.parse(e.target.result);
+                        if (!Array.isArray(dados)) throw new Error('Formato inválido');
+
+                        const resposta = confirm('Encontrados ' + dados.length + ' lançamentos.\n\nDeseja ADICIONAR aos dados existentes?\n\nOK = Adicionar\nCancelar = Substituir tudo');
+
+                        if (resposta) {
+                            const ids = new Set(lancamentos.map(function(l) { return l.id; }));
+                            const novos = dados.filter(function(l) { return !ids.has(l.id); });
+                            lancamentos = lancamentos.concat(novos);
+                            alert(novos.length + ' novos lançamentos adicionados.');
+                        } else {
+                            lancamentos = dados;
+                            alert('Dados substituídos com sucesso!');
+                        }
+
+                        salvar();
+                        renderizar();
+                    } catch (err) {
+                        alert('Arquivo inválido! Use um .json ou .xlsx válido.');
+                    }
+                };
+                leitor.readAsText(arquivo);
+            }
+            event.target.value = '';
+        }
+
+        init();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
+</body>
+</html>

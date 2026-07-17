@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerador de Ícones</title>
+    <style>
+        body { background: #1a1a2e; color: #fff; font-family: Arial; text-align: center; padding: 40px; }
+        canvas { border: 1px solid #333; margin: 10px; }
+        button { padding: 12px 24px; margin: 5px; background: #e94560; color: #fff; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+        button:hover { background: #c73650; }
+        p { margin: 20px 0; color: #aaa; }
+    </style>
+</head>
+<body>
+    <h1>Gerador de Ícones</h1>
+    <p>Clique nos botões para baixar os ícones e coloque na mesma pasta da planilha</p>
+    <div>
+        <canvas id="c192" width="192" height="192"></canvas>
+        <canvas id="c512" width="512" height="512"></canvas>
+    </div>
+    <button onclick="baixar(192)">Baixar icon-192.png</button>
+    <button onclick="baixar(512)">Baixar icon-512.png</button>
+
+    <script>
+        function desenhar(canvas) {
+            const ctx = canvas.getContext('2d');
+            const s = canvas.width;
+            const r = s / 2;
+            const escala = s / 100;
+
+            // Fundo
+            ctx.beginPath();
+            ctx.arc(r, r, r - 2 * escala, 0, Math.PI * 2);
+            ctx.fillStyle = '#16213e';
+            ctx.fill();
+            ctx.strokeStyle = '#e94560';
+            ctx.lineWidth = 3 * escala;
+            ctx.stroke();
+
+            // Barras
+            const barras = [
+                { x: 18, h: 25, cor: '#00c853' },
+                { x: 34, h: 40, cor: '#448aff' },
+                { x: 50, h: 50, cor: '#ffab00' },
+                { x: 66, h: 35, cor: '#e94560' }
+            ];
+
+            barras.forEach(b => {
+                const bx = b.x * escala;
+                const bw = 12 * escala;
+                const by = (55 + (50 - b.h)) * escala;
+                const bh = b.h * escala;
+                ctx.fillStyle = b.cor;
+                ctx.beginPath();
+                ctx.roundRect(bx, by, bw, bh, 3 * escala);
+                ctx.fill();
+            });
+
+            // Seta
+            ctx.beginPath();
+            ctx.moveTo(24 * escala, 52 * escala);
+            ctx.lineTo(40 * escala, 37 * escala);
+            ctx.lineTo(56 * escala, 27 * escala);
+            ctx.lineTo(72 * escala, 42 * escala);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5 * escala;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(72 * escala, 42 * escala);
+            ctx.lineTo(68 * escala, 35 * escala);
+            ctx.lineTo(75 * escala, 38 * escala);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+        }
+
+        desenhar(document.getElementById('c192'));
+        desenhar(document.getElementById('c512'));
+
+        function baixar(tamanho) {
+            const canvas = document.getElementById('c' + tamanho);
+            const link = document.createElement('a');
+            link.download = 'icon-' + tamanho + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>

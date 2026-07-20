@@ -9,6 +9,7 @@
     <link rel="manifest" href="manifest.json">
     <title>Controle Financeiro Mensal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -135,7 +136,7 @@
 
         .form-row {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
             gap: 10px;
             align-items: end;
         }
@@ -278,6 +279,99 @@
 
         .btn-hoje:hover { background: #448aff; color: #fff; }
 
+        /* Seção de Gráficos */
+        .graficos-area {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 22px;
+            margin-bottom: 25px;
+            border: 1px solid #0f3460;
+        }
+
+        .graficos-area h2 {
+            margin-bottom: 18px;
+            font-size: 1.1rem;
+            color: #e94560;
+        }
+
+        .graficos-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .grafico-box {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .grafico-box h3 {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        .grafico-canvas {
+            max-height: 250px;
+        }
+
+        /* Card Poupança */
+        .card.poupanca {
+            background: linear-gradient(135deg, #16213e, #0f3460);
+            border: 2px solid #00c853;
+        }
+
+        .card.poupanca .valor { color: #00c853; }
+
+        .poupanca-detalhes {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        /* Lista de categorias */
+        .categorias-resumo {
+            margin-top: 15px;
+        }
+
+        .cat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .cat-item:last-child { border-bottom: none; }
+
+        .cat-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cat-cor {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .cat-nome { font-size: 0.85rem; }
+
+        .cat-valor {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .cat-porcent {
+            font-size: 0.7rem;
+            color: #aaa;
+            margin-left: 8px;
+        }
+
         /* Botões Exportar/Importar */
         .backup-area {
             display: flex;
@@ -319,6 +413,7 @@
             .form-row { grid-template-columns: 1fr; }
             .btn-add { width: 100%; }
             .resumo-anual { flex-direction: column; align-items: center; }
+            .graficos-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -374,6 +469,31 @@
             </div>
         </div>
 
+        <!-- Poupança Potencial -->
+        <div class="resumo">
+            <div class="card poupanca" style="grid-column: 1 / -1;">
+                <h3>Poupança Potencial do Mês</h3>
+                <div class="valor" id="poupancaPotencial">R$ 0,00</div>
+                <div class="poupanca-detalhes" id="poupancaDetalhes"></div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="graficos-area">
+            <h2>Análise de Gastos</h2>
+            <div class="graficos-grid">
+                <div class="grafico-box">
+                    <h3>Gastos por Categoria (Pizza)</h3>
+                    <canvas id="graficoPizza" class="grafico-canvas"></canvas>
+                </div>
+                <div class="grafico-box">
+                    <h3>Gastos por Categoria (Barras)</h3>
+                    <canvas id="graficoBarras" class="grafico-canvas"></canvas>
+                </div>
+            </div>
+            <div class="categorias-resumo" id="categoriasResumo"></div>
+        </div>
+
         <!-- Resumo Anual -->
         <div class="resumo-anual" id="resumoAnual"></div>
 
@@ -399,6 +519,23 @@
                 <div class="form-group">
                     <label>Data</label>
                     <input type="date" id="data">
+                </div>
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="categoria">
+                        <option value="Salário">Salário</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Investimentos">Investimentos</option>
+                        <option value="Alimentação" selected>Alimentação</option>
+                        <option value="Moradia">Moradia</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Saúde">Saúde</option>
+                        <option value="Educação">Educação</option>
+                        <option value="Lazer">Lazer</option>
+                        <option value="Vestuário">Vestuário</option>
+                        <option value="Contas">Contas</option>
+                        <option value="Outros">Outros</option>
+                    </select>
                 </div>
                 <button class="btn-add" onclick="adicionarLancamento()">+ Adicionar</button>
             </div>
@@ -433,6 +570,23 @@
         let lancamentos = JSON.parse(localStorage.getItem('lancamentos')) || [];
         let mesAtual = new Date().getMonth();
         let anoAtual = new Date().getFullYear();
+        let graficoPizza = null;
+        let graficoBarras = null;
+
+        const CATEGORIA_CORES = {
+            'Salário': '#00c853',
+            'Freelance': '#76ff03',
+            'Investimentos': '#448aff',
+            'Alimentação': '#ff9800',
+            'Moradia': '#e94560',
+            'Transporte': '#ffab00',
+            'Saúde': '#00bcd4',
+            'Educação': '#9c27b0',
+            'Lazer': '#ff5722',
+            'Vestuário': '#e040fb',
+            'Contas': '#607d8b',
+            'Outros': '#78909c'
+        };
 
         function init() {
             document.getElementById('data').valueAsDate = new Date();
@@ -475,12 +629,13 @@
             const valor = parseFloat(document.getElementById('valor').value);
             const tipo = document.getElementById('tipo').value;
             const data = document.getElementById('data').value;
+            const categoria = document.getElementById('categoria').value;
 
             if (!descricao) { alert('Digite uma descrição.'); return; }
             if (!valor || valor <= 0) { alert('Digite um valor válido.'); return; }
             if (!data) { alert('Selecione uma data.'); return; }
 
-            lancamentos.push({ id: Date.now(), descricao, valor, tipo, data });
+            lancamentos.push({ id: Date.now(), descricao, valor, tipo, data, categoria });
             salvar();
             renderizar();
             document.getElementById('descricao').value = '';
@@ -524,6 +679,46 @@
             document.getElementById('totalSaidas').textContent = formatarMoeda(totalSaidas);
             document.getElementById('saldo').textContent = formatarMoeda(totalEntradas - totalSaidas);
 
+            // Poupança Potencial
+            const saldoMes = totalEntradas - totalSaidas;
+            const diasNoMes = new Date(anoAtual, mesAtual + 1, 0).getDate();
+            const hoje = new Date();
+            const diasRestantes = (hoje.getMonth() === mesAtual && hoje.getFullYear() === anoAtual)
+                ? diasNoMes - hoje.getDate()
+                : 0;
+            const mediaDiariaSaidas = doMes.filter(l => l.tipo === 'saida').length > 0
+                ? totalSaidas / Math.max(hoje.getDate(), 1)
+                : 0;
+            const gastoEstimadoRestante = mediaDiariaSaidas * diasRestantes;
+            const poupancaEstimada = Math.max(0, saldoMes - gastoEstimadoRestante);
+
+            document.getElementById('poupancaPotencial').textContent = formatarMoeda(poupancaEstimada);
+            document.getElementById('poupancaDetalhes').innerHTML = `
+                Saldo atual: ${formatarMoeda(saldoMes)} | 
+                Média diária de gastos: ${formatarMoeda(mediaDiariaSaidas)} | 
+                Dias restantes: ${diasRestantes} | 
+                Gasto estimado: ${formatarMoeda(gastoEstimadoRestante)}
+            `;
+
+            // Gráficos de categorias
+            const saidasPorCategoria = {};
+            doMes.filter(l => l.tipo === 'saida').forEach(l => {
+                const cat = l.categoria || 'Outros';
+                saidasPorCategoria[cat] = (saidasPorCategoria[cat] || 0) + l.valor;
+            });
+
+            const categoriasOrdenadas = Object.entries(saidasPorCategoria)
+                .sort((a, b) => b[1] - a[1]);
+
+            // Atualizar gráfico de pizza
+            atualizarGraficoPizza(categoriasOrdenadas);
+
+            // Atualizar gráfico de barras
+            atualizarGraficoBarras(categoriasOrdenadas);
+
+            // Lista de categorias
+            renderizarCategorias(categoriasOrdenadas, totalSaidas);
+
             const ordenados = [...doMes].sort((a, b) => new Date(b.data) - new Date(a.data));
 
             if (ordenados.length === 0) {
@@ -543,6 +738,133 @@
             }
 
             renderizarResumoAnual();
+        }
+
+        function atualizarGraficoPizza(dados) {
+            const ctx = document.getElementById('graficoPizza').getContext('2d');
+            const labels = dados.map(d => d[0]);
+            const valores = dados.map(d => d[1]);
+            const cores = labels.map(l => CATEGORIA_CORES[l] || '#78909c');
+
+            if (graficoPizza) graficoPizza.destroy();
+
+            if (dados.length === 0) {
+                ctx.fillStyle = '#555';
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Nenhum gasto registrado', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            graficoPizza = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: cores,
+                        borderWidth: 2,
+                        borderColor: '#16213e'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#fff', padding: 12, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const porcent = ((context.parsed / total) * 100).toFixed(1);
+                                    return context.label + ': ' + formatarMoeda(context.parsed) + ' (' + porcent + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function atualizarGraficoBarras(dados) {
+            const ctx = document.getElementById('graficoBarras').getContext('2d');
+            const labels = dados.map(d => d[0]);
+            const valores = dados.map(d => d[1]);
+            const cores = labels.map(l => CATEGORIA_CORES[l] || '#78909c');
+
+            if (graficoBarras) graficoBarras.destroy();
+
+            if (dados.length === 0) {
+                ctx.fillStyle = '#555';
+                ctx.font = '14px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText('Nenhum gasto registrado', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            graficoBarras = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Gastos',
+                        data: valores,
+                        backgroundColor: cores,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return formatarMoeda(context.parsed.x);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#aaa', callback: v => 'R$ ' + v.toLocaleString('pt-BR') },
+                            grid: { color: '#0f3460' }
+                        },
+                        y: {
+                            ticks: { color: '#fff', font: { size: 11 } },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderizarCategorias(dados, totalSaidas) {
+            const container = document.getElementById('categoriasResumo');
+            if (dados.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#555;padding:15px;">Nenhuma saída registrada neste mês.</div>';
+                return;
+            }
+
+            container.innerHTML = dados.map(([cat, valor]) => {
+                const cor = CATEGORIA_CORES[cat] || '#78909c';
+                const porcent = totalSaidas > 0 ? ((valor / totalSaidas) * 100).toFixed(1) : 0;
+                return `
+                    <div class="cat-item">
+                        <div class="cat-label">
+                            <div class="cat-cor" style="background:${cor}"></div>
+                            <span class="cat-nome">${cat}</span>
+                        </div>
+                        <div>
+                            <span class="cat-valor" style="color:${cor}">${formatarMoeda(valor)}</span>
+                            <span class="cat-porcent">${porcent}%</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function renderizarResumoAnual() {
@@ -620,13 +942,15 @@
                                 } else return;
 
                                 const descricao = row[2] ? String(row[2]).trim() : 'Sem descrição';
+                                const categoria = row[4] ? String(row[4]).trim() : 'Outros';
 
                                 todosLancamentos.push({
                                     id: Date.now() + Math.floor(Math.random() * 1000000),
                                     descricao: descricao,
                                     valor: valor,
                                     tipo: tipo,
-                                    data: dataStr
+                                    data: dataStr,
+                                    categoria: categoria
                                 });
                             });
                         });

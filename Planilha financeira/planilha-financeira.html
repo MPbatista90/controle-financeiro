@@ -136,9 +136,15 @@
 
         .form-row {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
             gap: 10px;
             align-items: end;
+        }
+
+        .form-btn-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 15px;
         }
 
         .form-group { display: flex; flex-direction: column; }
@@ -411,6 +417,7 @@
         @media (max-width: 768px) {
             .resumo { grid-template-columns: 1fr; }
             .form-row { grid-template-columns: 1fr; }
+            .form-btn-row { justify-content: stretch; }
             .btn-add { width: 100%; }
             .resumo-anual { flex-direction: column; align-items: center; }
             .graficos-grid { grid-template-columns: 1fr; }
@@ -537,6 +544,8 @@
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
+            </div>
+            <div class="form-btn-row">
                 <button class="btn-add" onclick="adicionarLancamento()">+ Adicionar</button>
             </div>
         </div>

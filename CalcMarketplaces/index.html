@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Preços - Marketplaces</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0 30px;
+        }
+
+        .logo-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .logo-svg {
+            width: 520px;
+            height: auto;
+            animation: logoFadeIn 1s ease-out;
+        }
+
+        @keyframes logoFadeIn {
+            from { opacity: 0; transform: translateY(-12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        header h1 {
+            display: none;
+        }
+
+        header p {
+            margin-top: 10px;
+            color: #999;
+            font-size: 1.05rem;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
+            padding: 36px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            font-size: 1.42rem;
+            margin-bottom: 24px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 .icon {
+            font-size: 1.6rem;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 1.03rem;
+            color: #aaa;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 14px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+            font-size: 1.1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3a7bd5;
+            box-shadow: 0 0 0 3px rgba(58, 123, 213, 0.2);
+        }
+
+        .form-group input::placeholder {
+            color: #666;
+        }
+
+        .form-group select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .marketplace-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .mp-card {
+            padding: 18px 16px;
+            border-radius: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            transition: all 0.25s;
+            text-align: center;
+            user-select: none;
+        }
+
+        .mp-card:hover {
+            border-color: rgba(58, 123, 213, 0.4);
+            background: rgba(58, 123, 213, 0.08);
+        }
+
+        .mp-card.active {
+            border-color: #3a7bd5;
+            background: rgba(58, 123, 213, 0.15);
+            box-shadow: 0 0 14px rgba(58, 123, 213, 0.2);
+        }
+
+        .mp-card .mp-name {
+            font-weight: 600;
+            font-size: 1.12rem;
+            color: #fff;
+        }
+
+        .mp-card[data-mp="mercadolivre"] .mp-name { color: #fff159; }
+        .mp-card[data-mp="amazon"] .mp-name        { color: #ff9900; }
+        .mp-card[data-mp="shopee"] .mp-name        { color: #ee4d2d; }
+        .mp-card[data-mp="magazineluiza"] .mp-name { color: #e42127; }
+        .mp-card[data-mp="aliexpress"] .mp-name    { color: #ff4747; }
+        .mp-card[data-mp="tiktokshop"] .mp-name    { color: #25F4EE; }
+        .mp-card[data-mp="tiktokshop"].active       { border-color: #FE2C55; box-shadow: 0 0 14px rgba(37, 244, 238, 0.3), 0 0 14px rgba(254, 44, 85, 0.3); }
+
+        .mp-card .mp-fee {
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .results-card {
+            grid-column: 1 / -1;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .marketplace-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .result-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+        }
+
+        .result-box .result-label {
+            font-size: 0.78rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .result-box .result-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .result-box .result-sub {
+            font-size: 0.75rem;
+            color: #777;
+            margin-top: 4px;
+        }
+
+        .result-box.price .result-value { color: #00d2ff; }
+        .result-box.profit .result-value { color: #00e676; }
+        .result-box.fee .result-value { color: #ff5252; }
+        .result-box.margin .result-value { color: #ffc107; }
+
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .breakdown-table th, .breakdown-table td {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        .breakdown-table th {
+            color: #888;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-weight: 500;
+        }
+
+        .breakdown-table td {
+            color: #ccc;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .breakdown-table tr:last-child td {
+            border-bottom: none;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .breakdown-table td:last-child {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .all-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .mp-result-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .mp-result-card h3 {
+            font-size: 1rem;
+            margin-bottom: 14px;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mp-result-card h3 .tag {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(58, 123, 213, 0.2);
+            color: #7ab3ff;
+        }
+
+        .mp-result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.85rem;
+        }
+
+        .mp-result-row .label { color: #999; }
+        .mp-result-row .value { color: #fff; font-family: 'Courier New', monospace; }
+        .mp-result-row.total {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 6px;
+            padding-top: 10px;
+            font-weight: 700;
+        }
+        .mp-result-row.total .value { color: #00d2ff; font-size: 1rem; }
+
+        .btn-calc {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+            color: #fff;
+            font-size: 1.16rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-calc:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(58, 123, 213, 0.4);
+        }
+
+        .btn-calc:active {
+            transform: translateY(0);
+        }
+
+        .toggle-all {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .toggle-all label {
+            font-size: 0.94rem;
+            color: #aaa;
+        }
+
+        .switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input { display: none; }
+
+        .switch .slider {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .switch .slider::before {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 3px;
+            top: 3px;
+            background: #666;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .switch input:checked + .slider {
+            background: rgba(58, 123, 213, 0.5);
+        }
+
+        .switch input:checked + .slider::before {
+            transform: translateX(20px);
+            background: #3a7bd5;
+        }
+
+        .category-select {
+            margin-bottom: 14px;
+        }
+
+        .hidden { display: none; }
+
+        .info-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 193, 7, 0.15);
+            color: #ffc107;
+            margin-left: 6px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px 0 20px;
+            color: #555;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-wrap">
+                <svg class="logo-svg" viewBox="0 0 500 120" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#00d2ff"/>
+                            <stop offset="50%" stop-color="#3a7bd5"/>
+                            <stop offset="100%" stop-color="#00d2ff"/>
+                        </linearGradient>
+                        <linearGradient id="grad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#3a7bd5"/>
+                            <stop offset="100%" stop-color="#00d2ff"/>
+                        </linearGradient>
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                            <feMerge>
+                                <feMergeNode in="blur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+
+                    <!-- Price Tag Icon -->
+                    <g transform="translate(5, 10)" filter="url(#glow)">
+                        <!-- Tag body -->
+                        <path d="M5,8 L5,78 Q5,86 13,86 L80,86 Q88,86 88,78 L88,42 L50,8 L13,8 Q5,8 5,16 Z"
+                              fill="none" stroke="url(#grad1)" stroke-width="3" stroke-linejoin="round"/>
+                        <!-- Tag hole -->
+                        <circle cx="26" cy="28" r="6" fill="none" stroke="#00d2ff" stroke-width="2.5"/>
+                        <!-- Dollar sign -->
+                        <text x="46" y="70" font-family="Segoe UI, Arial" font-size="34" font-weight="700"
+                              fill="url(#grad1)" text-anchor="middle">$</text>
+                    </g>
+
+                    <!-- Bar chart icon -->
+                    <g transform="translate(100, 28)">
+                        <rect x="0"  y="34" width="11" height="22" rx="3" fill="#3a7bd5" opacity="0.6"/>
+                        <rect x="15" y="22" width="11" height="34" rx="3" fill="#00b4d8" opacity="0.75"/>
+                        <rect x="30" y="10" width="11" height="46" rx="3" fill="#00d2ff" opacity="0.9"/>
+                        <rect x="45" y="0"  width="11" height="56" rx="3" fill="#00d2ff"/>
+                    </g>
+
+                    <!-- PriceHub Text -->
+                    <text x="172" y="72" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="700">
+                        <tspan fill="url(#grad1)">Price</tspan><tspan fill="#ffffff">Hub</tspan>
+                    </text>
+
+                    <!-- Subtle underline accent -->
+                    <line x1="172" y1="84" x2="480" y2="84" stroke="url(#grad1)" stroke-width="2.5" opacity="0.4" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <p>Calcule o preço ideal de venda considerando comissões, frete e margem de lucro</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Dados do Produto -->
+            <div class="card">
+                <h2><span class="icon">📦</span> Dados do Produto</h2>
+
+                <div class="form-group">
+                    <label>Custo do Produto (R$)</label>
+                    <input type="number" id="cost" placeholder="0,00" step="0.01" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label>Frete / Envio (R$)</label>
+                    <input type="number" id="shipping" placeholder="0,00" step="0.01" min="0" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label>Outros Custos (embalagem, etiqueta, etc.) (R$)</label>
+                    <input type="number" id="otherCosts" placeholder="0,00" step="0.01" min="0" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label>Margem de Lucro Desejada (%)</label>
+                    <input type="number" id="profitMargin" placeholder="30" step="1" min="0" max="500" value="30">
+                </div>
+
+                <div class="form-group">
+                    <label>Frete Grátis (repasse no preço)?</label>
+                    <select id="freeShipping">
+                        <option value="no">Não - Cliente paga frete</option>
+                        <option value="yes" selected>Sim - Incluir frete grátis no preço</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Seleção de Marketplace -->
+            <div class="card">
+                <h2><span class="icon">🏪</span> Selecione o Marketplace</h2>
+
+                <div class="toggle-all">
+                    <label>Selecionar Todos</label>
+                    <label class="switch">
+                        <input type="checkbox" id="selectAll">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="marketplace-grid" id="mpGrid">
+                    <div class="mp-card active" data-mp="mercadolivre">
+                        <div class="mp-name">Mercado Livre</div>
+                        <div class="mp-fee">11% a 16% por categoria</div>
+                    </div>
+                    <div class="mp-card" data-mp="amazon">
+                        <div class="mp-name">Amazon</div>
+                        <div class="mp-fee">8% a 15% + R$3,50/un</div>
+                    </div>
+                    <div class="mp-card" data-mp="shopee">
+                        <div class="mp-name">Shopee</div>
+                        <div class="mp-fee">14% a 20%</div>
+                    </div>
+                    <div class="mp-card" data-mp="magazineluiza">
+                        <div class="mp-name">Magazine Luiza</div>
+                        <div class="mp-fee">11% a 18%</div>
+                    </div>
+                    <div class="mp-card" data-mp="aliexpress">
+                        <div class="mp-name">AliExpress</div>
+                        <div class="mp-fee">5% a 8% (afiliados)</div>
+                    </div>
+                    <div class="mp-card" data-mp="tiktokshop">
+                        <div class="mp-name">TikTok Shop</div>
+                        <div class="mp-fee">4% a 10%</div>
+                    </div>
+                </div>
+
+                <!-- Categorias por marketplace -->
+                <div id="categorySection" class="category-select">
+                    <div class="form-group" id="cat-mercadolivre" data-mp="mercadolivre">
+                        <label>Categoria - Mercado Livre</label>
+                        <select onchange="updateFeeDisplay()">
+                            <option value="11">Padrão (11%)</option>
+                            <option value="11.5">Celulares e Smartphones (11,5%)</option>
+                            <option value="12">Eletrônicos, Informática (12%)</option>
+                            <option value="12.5">Casa, Móveis e Decoração (12,5%)</option>
+                            <option value="13">Esportes e Fitness (13%)</option>
+                            <option value="13.5">Moda e Acessórios (13,5%)</option>
+                            <option value="14">Beleza e Cuidados Pessoais (14%)</option>
+                            <option value="14.5">Brinquedos e Jogos (14,5%)</option>
+                            <option value="15">Saúde (15%)</option>
+                            <option value="17">Veículos e Peças (17%)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="cat-amazon" data-mp="amazon">
+                        <label>Categoria - Amazon</label>
+                        <select onchange="updateFeeDisplay()">
+                            <option value="8">Eletrônicos, Informática (8%)</option>
+                            <option value="8">Dispositivos Amazon (8%)</option>
+                            <option value="9">Casa e Cozinha (9%)</option>
+                            <option value="10">Esportes e Aventura (10%)</option>
+                            <option value="11">Livros e Mídia (11%)</option>
+                            <option value="12">Beleza e Cuidados (12%)</option>
+                            <option value="13">Moda e Bolsas (13%)</option>
+                            <option value="15">Geral / Padrão (15%)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="cat-shopee" data-mp="shopee">
+                        <label>Categoria - Shopee</label>
+                        <select onchange="updateFeeDisplay()">
+                            <option value="14">Eletrônicos e Acessórios (14%)</option>
+                            <option value="15">Casa e Cozinha (15%)</option>
+                            <option value="16">Moda Feminina (16%)</option>
+                            <option value="16">Moda Masculina (16%)</option>
+                            <option value="17">Beleza e Saúde (17%)</option>
+                            <option value="18">Mãe e Bebê (18%)</option>
+                            <option value="19">Animais Domésticos (19%)</option>
+                            <option value="20">Geral (20%)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="cat-magazineluiza" data-mp="magazineluiza">
+                        <label>Categoria - Magazine Luiza</label>
+                        <select onchange="updateFeeDisplay()">
+                            <option value="11">Informática e Celulares (11%)</option>
+                            <option value="12">Eletrônicos e Áudio (12%)</option>
+                            <option value="13">Eletrodomésticos (13%)</option>
+                            <option value="14">Casa e Decoração (14%)</option>
+                            <option value="15">Moda e Acessórios (15%)</option>
+                            <option value="16">Esportes e Lazer (16%)</option>
+                            <option value="17">Saúde e Beleza (17%)</option>
+                            <option value="18">Geral (18%)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="cat-aliexpress" data-mp="aliexpress">
+                        <label>Categoria - AliExpress</label>
+                        <select onchange="updateFeeDisplay()">
+                            <option value="5">Programa de Afiliados (5%)</option>
+                            <option value="6">Dropshipping (6%)</option>
+                            <option value="8">Geral / Padrão (8%)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="cat-tiktokshop" data-mp="tiktokshop">
+                        <label>Categoria - TikTok Shop</label>
+                        <select onchange="updateFeeDisplay()">
+                            <option value="4">Eletrônicos e Tecnologia (4%)</option>
+                            <option value="5">Casa e Cozinha (5%)</option>
+                            <option value="6">Esportes e Aventura (6%)</option>
+                            <option value="7">Moda e Acessórios (7%)</option>
+                            <option value="8">Beleza e Cuidados Pessoais (8%)</option>
+                            <option value="9">Mãe e Bebê (9%)</option>
+                            <option value="10">Geral / Padrão (10%)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Imposto (%)</label>
+                    <input type="number" id="icmsState" placeholder="0" step="0.1" min="0" max="100" value="0">
+                </div>
+
+                <button class="btn-calc" onclick="calculate()">Calcular Preços</button>
+            </div>
+
+            <!-- Resultados -->
+            <div class="card results-card" id="resultsSection" style="display: none;">
+                <h2><span class="icon">📊</span> Resultados por Marketplace</h2>
+
+                <div id="selectedResult"></div>
+                <div class="all-results" id="allResults"></div>
+            </div>
+        </div>
+
+        <footer>
+            Calculadora de Preços para Marketplaces &mdash; Todos os valores são estimativas. Confirme as comissões atualizadas no painel de cada marketplace.
+        </footer>
+    </div>
+
+    <script>
+        const marketplaces = {
+            mercadolivre: { name: 'Mercado Livre', color: '#fff159' },
+            amazon: { name: 'Amazon', color: '#ff9900' },
+            shopee: { name: 'Shopee', color: '#ee4d2d' },
+            magazineluiza: { name: 'Magazine Luiza', color: '#e42127' },
+            aliexpress: { name: 'AliExpress', color: '#e43225' },
+            tiktokshop: { name: 'TikTok Shop', color: '#00f2ea' }
+        };
+
+        // Toggle marketplace selection
+        document.querySelectorAll('.mp-card').forEach(card => {
+            card.addEventListener('click', () => {
+                card.classList.toggle('active');
+                updateCategoryVisibility();
+                updateSelectAllState();
+            });
+        });
+
+        document.getElementById('selectAll').addEventListener('change', function() {
+            const active = this.checked;
+            document.querySelectorAll('.mp-card').forEach(card => {
+                if (active) card.classList.add('active');
+                else card.classList.remove('active');
+            });
+            updateCategoryVisibility();
+        });
+
+        function updateSelectAllState() {
+            const allActive = document.querySelectorAll('.mp-card.active').length === Object.keys(marketplaces).length;
+            document.getElementById('selectAll').checked = allActive;
+        }
+
+        function updateCategoryVisibility() {
+            const cats = document.querySelectorAll('#categorySection .form-group');
+            cats.forEach(c => c.classList.add('hidden'));
+
+            document.querySelectorAll('.mp-card.active').forEach(card => {
+                const mp = card.dataset.mp;
+                const catEl = document.getElementById('cat-' + mp);
+                if (catEl) catEl.classList.remove('hidden');
+            });
+        }
+
+        function getActiveMarketplaces() {
+            return Array.from(document.querySelectorAll('.mp-card.active')).map(c => c.dataset.mp);
+        }
+
+        function getFee(mp) {
+            const catEl = document.querySelector(`#cat-${mp} select`);
+            return catEl ? parseFloat(catEl.value) : 0;
+        }
+
+        function formatCurrency(val) {
+            return 'R$ ' + val.toFixed(2).replace('.', ',');
+        }
+
+        function formatPercent(val) {
+            return val.toFixed(1) + '%';
+        }
+
+        function calculate() {
+            const cost = parseFloat(document.getElementById('cost').value) || 0;
+            const shipping = parseFloat(document.getElementById('shipping').value) || 0;
+            const otherCosts = parseFloat(document.getElementById('otherCosts').value) || 0;
+            const profitMargin = parseFloat(document.getElementById('profitMargin').value) || 0;
+            const freeShipping = document.getElementById('freeShipping').value === 'yes';
+            const extraTax = parseFloat(document.getElementById('icmsState').value) || 0;
+
+            const activeMPs = getActiveMarketplaces();
+
+            if (activeMPs.length === 0) {
+                alert('Selecione pelo menos um marketplace!');
+                return;
+            }
+
+            if (cost <= 0) {
+                alert('Informe o custo do produto!');
+                return;
+            }
+
+            const totalCost = cost + shipping + otherCosts;
+            const allResults = [];
+
+            activeMPs.forEach(mp => {
+                const feePercent = getFee(mp);
+                const totalFeePercent = feePercent + extraTax;
+
+                // Fórmula: Preço Venda = (Custo Total * (1 + Margem)) / (1 - Taxa/100)
+                const price = (totalCost * (1 + profitMargin / 100)) / (1 - totalFeePercent / 100);
+                const feeValue = price * feePercent / 100;
+                const extraTaxValue = price * extraTax / 100;
+                const totalFeeValue = feeValue + extraTaxValue;
+                const profit = price - totalCost - totalFeeValue;
+                const profitPercent = (profit / price) * 100;
+
+                // Preço com frete grátis
+                let priceWithShipping = price;
+                if (freeShipping) {
+                    priceWithShipping = (totalCost * (1 + profitMargin / 100)) / (1 - totalFeePercent / 100);
+                    // O frete já está no totalCost, então o cálculo acima já inclui
+                }
+
+                allResults.push({
+                    mp,
+                    name: marketplaces[mp].name,
+                    color: marketplaces[mp].color,
+                    feePercent,
+                    totalFeePercent,
+                    price: priceWithShipping,
+                    feeValue,
+                    extraTaxValue,
+                    totalFeeValue,
+                    totalCost,
+                    profit,
+                    profitPercent,
+                    shipping,
+                    freeShipping
+                });
+            });
+
+            renderResults(allResults);
+        }
+
+        function renderResults(results) {
+            const section = document.getElementById('resultsSection');
+            section.style.display = 'block';
+
+            // Render all marketplace results
+            const allContainer = document.getElementById('allResults');
+            allContainer.innerHTML = results.map(r => `
+                <div class="mp-result-card">
+                    <h3>
+                        ${r.name}
+                        <span class="tag">${formatPercent(r.totalFeePercent)} total</span>
+                    </h3>
+                    <div class="mp-result-row">
+                        <span class="label">Custo do Produto</span>
+                        <span class="value">${formatCurrency(r.totalCost)}</span>
+                    </div>
+                    ${r.shipping > 0 ? `
+                    <div class="mp-result-row">
+                        <span class="label">Inclui Frete</span>
+                        <span class="value">${r.freeShipping ? 'Sim (grátis)' : formatCurrency(r.shipping)}</span>
+                    </div>` : ''}
+                    <div class="mp-result-row">
+                        <span class="label">Comissão (${formatPercent(r.feePercent)})</span>
+                        <span class="value">-${formatCurrency(r.feeValue)}</span>
+                    </div>
+                    ${r.extraTaxValue > 0 ? `
+                    <div class="mp-result-row">
+                        <span class="label">ICMS (${formatPercent(r.totalFeePercent - r.feePercent)})</span>
+                        <span class="value">-${formatCurrency(r.extraTaxValue)}</span>
+                    </div>` : ''}
+                    <div class="mp-result-row">
+                        <span class="label">Lucro Líquido</span>
+                        <span class="value" style="color: ${r.profit >= 0 ? '#00e676' : '#ff5252'}">
+                            ${formatCurrency(r.profit)}
+                        </span>
+                    </div>
+                    <div class="mp-result-row total">
+                        <span class="label">Preço de Venda</span>
+                        <span class="value">${formatCurrency(r.price)}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Enter key triggers calculation
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') calculate();
+            });
+        });
+
+        updateCategoryVisibility();
+    </script>
+</body>
+</html>

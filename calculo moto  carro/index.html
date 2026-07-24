@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Controle da Moto">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="Controle Moto">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="HandheldFriendly" content="true">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-startup-image" href="icons/icon-512.png" media="(device-width: 375px)">
+  <title>Controle da Moto</title>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Chart.js plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+  <!-- html2canvas + jspdf for PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Google API (loaded on demand) -->
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== SPLASH SCREEN ===== -->
+  <div id="splash-screen" class="splash-screen" role="status" aria-label="Carregando">
+    <div class="splash-content">
+      <div class="splash-icon">
+        <i class="fas fa-motorcycle"></i>
+      </div>
+      <h1>Controle da Moto</h1>
+      <p class="text-muted" style="margin-bottom:1.5rem;font-size:clamp(0.8rem,2.5vw,0.95rem);">Carregando...</p>
+      <div class="splash-spinner"></div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <i class="fas fa-motorcycle"></i>
+        <span>Controle da Moto</span>
+      </div>
+      <button id="sidebar-close" class="sidebar-close" aria-label="Fechar menu">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard">
+        <i class="fas fa-chart-pie"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="fuel">
+        <i class="fas fa-gas-pump"></i>
+        <span>Abastecimentos</span>
+      </a>
+      <a href="#" class="nav-item" data-page="oil">
+        <i class="fas fa-oil-can"></i>
+        <span>Troca de Óleo</span>
+      </a>
+      <a href="#" class="nav-item" data-page="maintenance">
+        <i class="fas fa-tools"></i>
+        <span>Manutenções</span>
+      </a>
+      <a href="#" class="nav-item" data-page="charts">
+        <i class="fas fa-chart-line"></i>
+        <span>Gráficos</span>
+      </a>
+      <a href="#" class="nav-item" data-page="history">
+        <i class="fas fa-table"></i>
+        <span>Histórico</span>
+      </a>
+      <a href="#" class="nav-item" data-page="export">
+        <i class="fas fa-file-export"></i>
+        <span>Exportar / Importar</span>
+      </a>
+      <a href="#" class="nav-item" data-page="sync">
+        <i class="fas fa-cloud"></i>
+        <span>Sincronizar</span>
+      </a>
+      <a href="#" class="nav-item" data-page="settings">
+        <i class="fas fa-cog"></i>
+        <span>Configurações</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sync-status" id="sync-status">
+        <i class="fas fa-cloud"></i>
+        <span id="sync-text">Offline</span>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Alternar tema">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== OVERLAY ===== -->
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main id="main-content" class="main-content">
+
+    <!-- ===== TOP BAR ===== -->
+    <header class="top-bar">
+      <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Abrir menu">
+        <i class="fas fa-bars"></i>
+      </button>
+      <h2 id="page-title">Dashboard</h2>
+      <div class="top-bar-actions">
+        <button id="sync-now-btn" class="btn btn-sm btn-outline" title="Sincronizar agora">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+        <button id="add-btn" class="btn btn-sm btn-primary" title="Adicionar">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== PAGES ===== -->
+
+    <!-- Dashboard -->
+    <section id="page-dashboard" class="page active">
+
+      <!-- Banner da Moto -->
+      <div class="moto-banner card">
+        <div class="moto-banner-content">
+          <div class="moto-photo" id="moto-photo">
+            <img id="moto-photo-img" src="" alt="Foto da Moto">
+            <div class="moto-photo-placeholder">
+              <i class="fas fa-camera"></i>
+              <span>Adicionar Foto</span>
+            </div>
+          </div>
+          <div class="moto-info">
+            <h1 id="moto-name" class="moto-name">Minha Moto</h1>
+            <button id="edit-moto-name" class="btn btn-sm btn-ghost">
+              <i class="fas fa-pen"></i> Editar
+            </button>
+            <div class="moto-stats">
+              <div class="moto-stat">
+                <span class="moto-stat-label">Odômetro</span>
+                <span class="moto-stat-value" id="display-odometer">0 km</span>
+              </div>
+              <div class="moto-stat">
+                <span class="moto-stat-label">Autonomia</span>
+                <span class="moto-stat-value" id="display-autonomy">0 km</span>
+              </div>
+              <div class="moto-stat">
+                <span class="moto-stat-label">Consumo Médio</span>
+                <span class="moto-stat-value" id="display-avg-consumption">0 km/L</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="moto-oil-warning" id="oil-warning-banner" style="display:none;">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="oil-warning-text"></span>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card card">
+          <div class="kpi-icon" style="background:#1a6dff22;color:#1a6dff">
+            <i class="fas fa-tachometer-alt"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Média km/L</span>
+            <span class="kpi-value" id="kpi-avg-consumption">0,0</span>
+          </div>
+        </div>
+        <div class="kpi-card card">
+          <div class="kpi-icon" style="background:#22c55e22;color:#22c55e">
+            <i class="fas fa-arrow-up"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Melhor km/L</span>
+            <span class="kpi-value" id="kpi-best-consumption">0,0</span>
+          </div>
+        </div>
+        <div class="kpi-card card">
+          <div class="kpi-icon" style="background:#ef444422;color:#ef4444">
+            <i class="fas fa-arrow-down"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Pior km/L</span>
+            <span class="kpi-value" id="kpi-worst-consumption">0,0</span>
+          </div>
+        </div>
+        <div class="kpi-card card">
+          <div class="kpi-icon" style="background:#a855f722;color:#a855f7">
+            <i class="fas fa-dollar-sign"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Total Gasto</span>
+            <span class="kpi-value" id="kpi-total-spent">R$ 0,00</span>
+          </div>
+        </div>
+        <div class="kpi-card card">
+          <div class="kpi-icon" style="background:#f59e0b22;color:#f59e0b">
+            <i class="fas fa-gas-pump"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Total Abastecido</span>
+            <span class="kpi-value" id="kpi-total-liters">0 L</span>
+          </div>
+        </div>
+        <div class="kpi-card card">
+          <div class="kpi-icon" style="background:#06b6d422;color:#06b6d4">
+            <i class="fas fa-road"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Total Percorrido</span>
+            <span class="kpi-value" id="kpi-total-km">0 km</span>
+          </div>
+        </div>
+        <div class="kpi-card card">
+          <div class="kpi-icon" style="background:#ec489922;color:#ec4899">
+            <i class="fas fa-coins"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Custo por km</span>
+            <span class="kpi-value" id="kpi-cost-per-km">R$ 0,00</span>
+          </div>
+        </div>
+        <div class="kpi-card card">
+          <div class="kpi-icon" style="background:#14b8a622;color:#14b8a6">
+            <i class="fas fa-shopping-cart"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Abastecimentos</span>
+            <span class="kpi-value" id="kpi-total-refuels">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini gráficos do Dashboard -->
+      <div class="dashboard-charts">
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3><i class="fas fa-chart-line"></i> Evolução do Consumo</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="dash-chart-consumption"></canvas>
+          </div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3><i class="fas fa-dollar-sign"></i> Gastos por Mês</h3>
+          </div>
+          <div class="card-body">
+            <canvas id="dash-chart-monthly"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Análises Inteligentes -->
+      <div class="card insights-card">
+        <div class="card-header">
+          <h3><i class="fas fa-brain"></i> Análises Inteligentes</h3>
+        </div>
+        <div class="card-body" id="insights-container">
+          <div class="insight-loading">Carregando análises...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Abastecimentos -->
+    <section id="page-fuel" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-gas-pump"></i> Novo Abastecimento</h3>
+        </div>
+        <div class="card-body">
+          <form id="fuel-form" class="form-grid">
+            <div class="form-group">
+              <label for="fuel-date">Data</label>
+              <input type="date" id="fuel-date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="fuel-odometer">Odômetro (km)</label>
+              <input type="number" id="fuel-odometer" class="form-control" step="0.1" required>
+            </div>
+            <div class="form-group">
+              <label for="fuel-liters">Litros</label>
+              <input type="number" id="fuel-liters" class="form-control" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label for="fuel-type">Tipo de Combustível</label>
+              <select id="fuel-type" class="form-control">
+                <option value="Comum">Comum</option>
+                <option value="Aditivada">Aditivada</option>
+                <option value="Premium">Premium</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="fuel-station">Posto</label>
+              <input type="text" id="fuel-station" class="form-control" placeholder="Nome do posto">
+            </div>
+            <div class="form-group">
+              <label for="fuel-price">Valor por Litro (R$)</label>
+              <input type="number" id="fuel-price" class="form-control" step="0.001">
+            </div>
+            <div class="form-group">
+              <label for="fuel-total">Valor Total (R$)</label>
+              <input type="number" id="fuel-total" class="form-control" step="0.01">
+            </div>
+            <div class="form-group full-width">
+              <label for="fuel-notes">Observações</label>
+              <textarea id="fuel-notes" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label for="fuel-receipt">Foto do Comprovante</label>
+              <input type="file" id="fuel-receipt" class="form-control" accept="image/*">
+              <div id="fuel-receipt-preview" class="receipt-preview"></div>
+            </div>
+            <div class="form-actions full-width">
+              <input type="hidden" id="fuel-edit-id" value="">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> <span id="fuel-submit-text">Registrar Abastecimento</span>
+              </button>
+              <button type="button" id="fuel-cancel-edit" class="btn btn-outline" style="display:none">
+                <i class="fas fa-times"></i> Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tabela de Abastecimentos -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-list"></i> Histórico de Abastecimentos</h3>
+          <div class="card-header-actions">
+            <input type="text" id="fuel-search" class="search-input" placeholder="Buscar por posto...">
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="fuel-table">
+              <thead>
+                <tr>
+                  <th data-sort="date" class="sortable">Data <i class="fas fa-sort"></i></th>
+                  <th data-sort="odometer" class="sortable">Odômetro <i class="fas fa-sort"></i></th>
+                  <th data-sort="kmDriven" class="sortable">Km Rodados <i class="fas fa-sort"></i></th>
+                  <th data-sort="liters" class="sortable">Litros <i class="fas fa-sort"></i></th>
+                  <th data-sort="consumption" class="sortable">Consumo <i class="fas fa-sort"></i></th>
+                  <th>Tipo</th>
+                  <th data-sort="totalCost" class="sortable">Valor <i class="fas fa-sort"></i></th>
+                  <th>Posto</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="fuel-table-body"></tbody>
+            </table>
+          </div>
+          <div class="table-empty" id="fuel-table-empty">
+            <i class="fas fa-gas-pump"></i>
+            <p>Nenhum abastecimento registrado. Comece agora!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Troca de Óleo -->
+    <section id="page-oil" class="page">
+      <!-- Status do Óleo -->
+      <div class="card oil-status-card">
+        <div class="card-header">
+          <h3><i class="fas fa-oil-can"></i> Status do Óleo</h3>
+        </div>
+        <div class="card-body">
+          <div class="oil-status-container">
+            <div class="oil-gauge" id="oil-gauge">
+              <canvas id="oil-gauge-canvas" width="200" height="200"></canvas>
+              <div class="oil-gauge-center">
+                <span id="oil-percent-display">0%</span>
+              </div>
+            </div>
+            <div class="oil-info">
+              <div class="oil-info-item">
+                <span class="oil-info-label">Quilometragem atual</span>
+                <span class="oil-info-value" id="oil-current-km">0 km</span>
+              </div>
+              <div class="oil-info-item">
+                <span class="oil-info-label">Última troca</span>
+                <span class="oil-info-value" id="oil-last-change">---</span>
+              </div>
+              <div class="oil-info-item">
+                <span class="oil-info-label">Próxima troca em</span>
+                <span class="oil-info-value" id="oil-next-change">---</span>
+              </div>
+              <div class="oil-info-item highlight" id="oil-warning-msg">
+                <i class="fas fa-info-circle"></i>
+                <span>Configure a troca de óleo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulário de Troca de Óleo -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-plus-circle"></i> <span id="oil-form-title">Registrar Troca de Óleo</span></h3>
+        </div>
+        <div class="card-body">
+          <form id="oil-form" class="form-grid">
+            <div class="form-group">
+              <label for="oil-date">Data</label>
+              <input type="date" id="oil-date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="oil-km">Quilometragem (km)</label>
+              <input type="number" id="oil-km" class="form-control" step="0.1" required>
+            </div>
+            <div class="form-group">
+              <label for="oil-type">Tipo de Óleo</label>
+              <select id="oil-type" class="form-control">
+                <option value="Mineral">Mineral</option>
+                <option value="Semissintético">Semissintético</option>
+                <option value="Sintético">Sintético</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="oil-brand">Marca</label>
+              <input type="text" id="oil-brand" class="form-control" placeholder="Ex: Mobil, Shell...">
+            </div>
+            <div class="form-group">
+              <label for="oil-viscosity">Viscosidade</label>
+              <select id="oil-viscosity" class="form-control">
+                <option value="10W-30">10W-30</option>
+                <option value="10W-40">10W-40</option>
+                <option value="10W-50">10W-50</option>
+                <option value="15W-40">15W-40</option>
+                <option value="15W-50">15W-50</option>
+                <option value="20W-50">20W-50</option>
+                <option value="5W-30">5W-30</option>
+                <option value="5W-40">5W-40</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="oil-quantity">Quantidade (L)</label>
+              <input type="number" id="oil-quantity" class="form-control" step="0.1" value="1.0">
+            </div>
+            <div class="form-group">
+              <label for="oil-filter">Filtro Trocado</label>
+              <select id="oil-filter" class="form-control">
+                <option value="Sim">Sim</option>
+                <option value="Não">Não</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="oil-interval-km">Intervalo (km)</label>
+              <input type="number" id="oil-interval-km" class="form-control" value="3000" placeholder="km até próxima troca">
+            </div>
+            <div class="form-group">
+              <label for="oil-interval-months">Intervalo (meses)</label>
+              <input type="number" id="oil-interval-months" class="form-control" value="6" placeholder="meses até próxima troca">
+            </div>
+            <div class="form-group full-width">
+              <label for="oil-notes">Observações</label>
+              <textarea id="oil-notes" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-actions full-width">
+              <input type="hidden" id="oil-edit-id" value="">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> <span id="oil-submit-text">Registrar Troca</span>
+              </button>
+              <button type="button" id="oil-cancel-edit" class="btn btn-outline" style="display:none">
+                <i class="fas fa-times"></i> Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Histórico de Trocas -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-history"></i> Histórico de Trocas de Óleo</h3>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="oil-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Quilometragem</th>
+                  <th>Marca</th>
+                  <th>Tipo</th>
+                  <th>Quantidade</th>
+                  <th>Observações</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="oil-table-body"></tbody>
+            </table>
+          </div>
+          <div class="table-empty" id="oil-table-empty">
+            <i class="fas fa-oil-can"></i>
+            <p>Nenhuma troca de óleo registrada.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Manutenções -->
+    <section id="page-maintenance" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-tools"></i> <span id="maint-form-title">Registrar Manutenção</span></h3>
+        </div>
+        <div class="card-body">
+          <form id="maint-form" class="form-grid">
+            <div class="form-group">
+              <label for="maint-date">Data</label>
+              <input type="date" id="maint-date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="maint-km">Quilometragem (km)</label>
+              <input type="number" id="maint-km" class="form-control" step="0.1">
+            </div>
+            <div class="form-group">
+              <label for="maint-type">Tipo de Manutenção</label>
+              <select id="maint-type" class="form-control">
+                <option value="Pastilhas de Freio">Pastilhas de Freio</option>
+                <option value="Pneus">Pneus</option>
+                <option value="Filtro de Ar">Filtro de Ar</option>
+                <option value="Vela de Ignição">Vela de Ignição</option>
+                <option value="Bateria">Bateria</option>
+                <option value="Relação (Corrente)">Relação (Corrente)</option>
+                <option value="Fluido de Freio">Fluido de Freio</option>
+                <option value="Lâmpadas">Lâmpadas</option>
+                <option value="Embreagem">Embreagem</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="maint-description">Descrição</label>
+              <input type="text" id="maint-description" class="form-control" placeholder="Descreva o serviço">
+            </div>
+            <div class="form-group">
+              <label for="maint-cost">Custo (R$)</label>
+              <input type="number" id="maint-cost" class="form-control" step="0.01">
+            </div>
+            <div class="form-group">
+              <label for="maint-next-km">Próxima em (km)</label>
+              <input type="number" id="maint-next-km" class="form-control" step="0.1" placeholder="km">
+            </div>
+            <div class="form-group">
+              <label for="maint-next-months">Próxima em (meses)</label>
+              <input type="number" id="maint-next-months" class="form-control" placeholder="meses">
+            </div>
+            <div class="form-group full-width">
+              <label for="maint-notes">Observações</label>
+              <textarea id="maint-notes" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-actions full-width">
+              <input type="hidden" id="maint-edit-id" value="">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> <span id="maint-submit-text">Registrar Manutenção</span>
+              </button>
+              <button type="button" id="maint-cancel-edit" class="btn btn-outline" style="display:none">
+                <i class="fas fa-times"></i> Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-list"></i> Histórico de Manutenções</h3>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table" id="maint-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Quilometragem</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Custo</th>
+                  <th>Observações</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="maint-table-body"></tbody>
+            </table>
+          </div>
+          <div class="table-empty" id="maint-table-empty">
+            <i class="fas fa-tools"></i>
+            <p>Nenhuma manutenção registrada.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Gráficos -->
+    <section id="page-charts" class="page">
+      <div class="charts-filters card">
+        <div class="card-header">
+          <h3><i class="fas fa-filter"></i> Filtros dos Gráficos</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-grid filters-grid">
+            <div class="form-group">
+              <label>Período</label>
+              <select id="chart-period" class="form-control">
+                <option value="all">Tudo</option>
+                <option value="year">Último Ano</option>
+                <option value="6months">Últimos 6 Meses</option>
+                <option value="3months">Últimos 3 Meses</option>
+                <option value="month">Último Mês</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Ano</label>
+              <select id="chart-year" class="form-control">
+                <option value="all">Todos</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tipo de Combustível</label>
+              <select id="chart-fuel-type" class="form-control">
+                <option value="all">Todos</option>
+                <option value="Comum">Comum</option>
+                <option value="Aditivada">Aditivada</option>
+                <option value="Premium">Premium</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Posto</label>
+              <select id="chart-station" class="form-control">
+                <option value="all">Todos</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="card chart-card full-width">
+          <div class="card-header">
+            <h3>Evolução do km/L</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="consumption-evolution" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-consumption-evolution"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Média Móvel do Consumo</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="moving-average" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-moving-average"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Comparação por Combustível</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="fuel-comparison" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-fuel-comparison"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Gastos Mensais</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="monthly-spending" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-monthly-spending"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Gastos por Posto</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="station-spending" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-station-spending"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Consumo por Posto</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="station-consumption" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-station-consumption"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Preço Médio do Litro</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="avg-price" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-avg-price"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Km Rodados por Mês</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="km-monthly" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-km-monthly"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card full-width">
+          <div class="card-header">
+            <h3>Projeção de Quilometragem (6 e 12 meses)</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="km-projection" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-km-projection"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Vida Útil do Óleo</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="oil-life" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-oil-life"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Km entre Trocas de Óleo</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="oil-interval" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-oil-interval"></canvas>
+          </div>
+        </div>
+
+        <div class="card chart-card full-width">
+          <div class="card-header">
+            <h3>Ranking de Abastecimentos</h3>
+            <div class="card-header-actions">
+              <button class="btn btn-sm btn-ghost chart-export-btn" data-chart="ranking" title="Exportar">
+                <i class="fas fa-download"></i>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <canvas id="chart-ranking"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Histórico Completo -->
+    <section id="page-history" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-search"></i> Histórico Completo</h3>
+          <div class="card-header-actions">
+            <input type="text" id="history-search" class="search-input" placeholder="Buscar...">
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="filters-row">
+            <div class="form-group">
+              <label>Data inicial</label>
+              <input type="date" id="history-date-start" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Data final</label>
+              <input type="date" id="history-date-end" class="form-control">
+            </div>
+            <div class="form-group">
+              <label>Tipo</label>
+              <select id="history-type" class="form-control">
+                <option value="all">Todos</option>
+                <option value="fuel">Abastecimentos</option>
+                <option value="oil">Troca de Óleo</option>
+                <option value="maintenance">Manutenções</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Combustível</label>
+              <select id="history-fuel-type" class="form-control">
+                <option value="all">Todos</option>
+                <option value="Comum">Comum</option>
+                <option value="Aditivada">Aditivada</option>
+                <option value="Premium">Premium</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table" id="history-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Data</th>
+                  <th>Odômetro</th>
+                  <th>Detalhes</th>
+                  <th>Valor</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body"></tbody>
+            </table>
+          </div>
+          <div class="table-empty" id="history-table-empty">
+            <i class="fas fa-search"></i>
+            <p>Nenhum registro encontrado.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Exportar / Importar -->
+    <section id="page-export" class="page">
+      <div class="export-grid">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-file-export"></i> Exportar Dados</h3>
+          </div>
+          <div class="card-body">
+            <div class="export-buttons">
+              <button id="export-csv" class="btn btn-primary btn-block">
+                <i class="fas fa-file-csv"></i> Exportar CSV
+              </button>
+              <button id="export-excel" class="btn btn-success btn-block">
+                <i class="fas fa-file-excel"></i> Exportar Excel
+              </button>
+              <button id="export-pdf" class="btn btn-danger btn-block">
+                <i class="fas fa-file-pdf"></i> Imprimir / PDF
+              </button>
+              <button id="export-backup" class="btn btn-outline btn-block">
+                <i class="fas fa-download"></i> Exportar Backup JSON
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-file-import"></i> Importar Dados</h3>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">Selecione um arquivo JSON de backup para restaurar os dados.</p>
+            <div class="export-buttons">
+              <div class="file-input-wrapper">
+                <label for="import-backup" class="btn btn-primary btn-block">
+                  <i class="fas fa-upload"></i> Importar Backup JSON
+                </label>
+                <input type="file" id="import-backup" accept=".json" style="display:none">
+              </div>
+            </div>
+            <div id="import-result" class="import-result"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fas fa-trash"></i> Gerenciar Dados</h3>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">Atenção: esta ação não pode ser desfeita.</p>
+            <button id="clear-all-data" class="btn btn-danger btn-block">
+              <i class="fas fa-trash-alt"></i> Zerar Todos os Dados
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sincronizar -->
+    <section id="page-sync" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-cloud-upload-alt"></i> Sincronização com Google Drive</h3>
+        </div>
+        <div class="card-body">
+          <div id="sync-login-status" class="sync-status-container">
+            <div class="sync-status-icon">
+              <i class="fas fa-cloud" id="sync-main-icon"></i>
+            </div>
+            <div class="sync-status-info">
+              <h4 id="sync-main-text">Não conectado</h4>
+              <p id="sync-main-detail">Faça login com sua conta Google para sincronizar seus dados.</p>
+              <p id="sync-timestamp" class="sync-timestamp" style="display:none"></p>
+              <div id="sync-error-msg" class="sync-error" style="display:none"></div>
+            </div>
+          </div>
+          <div class="sync-actions">
+            <button id="google-login-btn" class="btn btn-primary">
+              <i class="fab fa-google"></i> Conectar Google Drive
+            </button>
+            <button id="google-sync-btn" class="btn btn-outline" style="display:none">
+              <i class="fas fa-sync-alt"></i> Sincronizar Agora
+            </button>
+            <button id="google-restore-btn" class="btn btn-outline" style="display:none">
+              <i class="fas fa-cloud-download-alt"></i> Restaurar do Drive
+            </button>
+            <button id="google-logout-btn" class="btn btn-outline btn-danger-outline" style="display:none">
+              <i class="fas fa-sign-out-alt"></i> Desconectar
+            </button>
+          </div>
+          <div id="sync-progress" class="sync-progress" style="display:none">
+            <div class="sync-progress-bar" id="sync-progress-bar"></div>
+            <span id="sync-progress-text">Sincronizando...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Configurações -->
+    <section id="page-settings" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-cog"></i> Configurações</h3>
+        </div>
+        <div class="card-body">
+          <div class="settings-section">
+            <h4>Personalização</h4>
+            <div class="settings-row">
+              <label>Nome da Motocicleta</label>
+              <div class="settings-control">
+                <input type="text" id="settings-moto-name" class="form-control" placeholder="Nome da sua moto">
+                <button id="settings-save-name" class="btn btn-primary btn-sm">Salvar</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <label>Foto da Motocicleta</label>
+              <div class="settings-control">
+                <input type="file" id="settings-moto-photo" accept="image/*">
+                <button id="settings-remove-photo" class="btn btn-outline btn-sm">Remover Foto</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <label>Tema</label>
+              <div class="settings-control">
+                <button id="settings-theme-toggle" class="btn btn-outline">
+                  <i class="fas fa-moon"></i> <span id="settings-theme-text">Modo Escuro</span>
+                </button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <label>Unidade de Medida</label>
+              <div class="settings-control">
+                <select id="settings-unit" class="form-control">
+                  <option value="km">km (Quilômetros)</option>
+                  <option value="mi">mi (Milhas)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <hr>
+          <div class="settings-section">
+            <h4>Padrões</h4>
+            <div class="settings-row">
+              <label>Intervalo padrão troca de óleo (km)</label>
+              <div class="settings-control">
+                <input type="number" id="settings-oil-interval" class="form-control" value="3000">
+              </div>
+            </div>
+            <div class="settings-row">
+              <label>Intervalo padrão troca de óleo (meses)</label>
+              <div class="settings-control">
+                <input type="number" id="settings-oil-months" class="form-control" value="6">
+              </div>
+            </div>
+          </div>
+          <hr>
+          <div class="settings-section">
+            <h4>Sobre</h4>
+            <p class="text-muted">Controle da Moto v2.0 - Sistema completo de gerenciamento para motocicletas.</p>
+            <p class="text-muted">Dados salvos automaticamente no navegador (LocalStorage).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== MODAL ===== -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none">
+    <div class="modal" id="modal-container">
+      <div class="modal-header">
+        <h3 id="modal-title"></h3>
+        <button id="modal-close" class="modal-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- ===== SCRIPTS ===== -->
+  <!-- Config (must be first) -->
+  <script src="js/config.js"></script>
+  <!-- Modules -->
+  <script src="js/storage.js"></script>
+  <script src="js/fuel.js"></script>
+  <script src="js/oil.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/drive.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
